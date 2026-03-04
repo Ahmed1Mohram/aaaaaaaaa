@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, MouseEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
 
@@ -59,6 +59,8 @@ export default function Scene3_Galaxy({ onNext, herName }: Props) {
   const [centerClicked, setCenterClicked] = useState(false);
   const [showHint, setShowHint] = useState(true);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const isTransitioning = useRef(false);
+  const hintClosedTime = useRef(0);
   const timer = useTimer();
 
   useEffect(() => {
@@ -165,8 +167,24 @@ export default function Scene3_Galaxy({ onNext, herName }: Props) {
     return () => cancelAnimationFrame(animFrame);
   }, []);
 
+  const handleCloseHint = (e?: MouseEvent) => {
+    e?.stopPropagation();
+    setShowHint(false);
+    hintClosedTime.current = Date.now();
+  };
+
   const handleCenterClick = () => {
-    if (centerClicked) return;
+    if (isTransitioning.current) return;
+    if (showHint) {
+      handleCloseHint();
+      return;
+    }
+
+    // Prevent accidental clicks within 1.5 seconds of closing the hint
+    // to give users time to understand the scene before skipping it
+    if (Date.now() - hintClosedTime.current < 1500) return;
+
+    isTransitioning.current = true;
     setCenterClicked(true);
     const duration = 3000;
     const end = Date.now() + duration;
@@ -293,7 +311,7 @@ export default function Scene3_Galaxy({ onNext, herName }: Props) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
-            onClick={() => setShowHint(false)}
+            onClick={() => handleCloseHint()}
           >
             <motion.div
               className="text-center px-6 py-4 rounded-3xl bg-black/20 backdrop-blur-sm border border-white/5"
@@ -312,7 +330,7 @@ export default function Scene3_Galaxy({ onNext, herName }: Props) {
       {/* Moon (center) */}
       <motion.div
         className="relative z-10 flex flex-col items-center justify-center cursor-pointer mt-12 md:mt-0"
-        onClick={showHint ? () => setShowHint(false) : handleCenterClick}
+        onClick={() => handleCenterClick()}
         animate={{ y: [0, -6, 0] }}
         transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
         whileHover={{ scale: 1.03 }}
