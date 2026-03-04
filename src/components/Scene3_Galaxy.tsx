@@ -19,7 +19,6 @@ const MEMORIES = [
   { id: 6, text: "أحب الطريقة التي تنظرين بها إليّ.", x: 88, y: 42 },
 ];
 
-// Generate stars once (stable)
 const BG_STARS = Array.from({ length: 160 }, (_, i) => ({
   id: i,
   size: Math.random() * 2.5 + 0.5,
@@ -31,11 +30,11 @@ const BG_STARS = Array.from({ length: 160 }, (_, i) => ({
 }));
 
 function useTimer() {
-  const [elapsed, setElapsed] = useState(() => Date.now() - START_DATE.getTime());
+  const [elapsed, setElapsed] = useState(() => Math.max(0, Date.now() - START_DATE.getTime()));
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setElapsed(Date.now() - START_DATE.getTime());
+      setElapsed(Math.max(0, Date.now() - START_DATE.getTime()));
     }, 1000);
     return () => clearInterval(interval);
   }, []);
@@ -62,81 +61,97 @@ export default function Scene3_Galaxy({ onNext, herName }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const timer = useTimer();
 
-  // Moon shimmer canvas
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    canvas.width = 220;
-    canvas.height = 220;
+    canvas.width = 250;
+    canvas.height = 250;
 
     let animFrame: number;
     let t = 0;
 
     const draw = () => {
-      ctx.clearRect(0, 0, 220, 220);
-      const cx = 110, cy = 110, r = 80;
+      ctx.clearRect(0, 0, 250, 250);
+      const cx = 125, cy = 125, r = 85;
 
-      // Outer glow layers
-      for (let g = 5; g >= 1; g--) {
-        const grd = ctx.createRadialGradient(cx, cy, r - 5, cx, cy, r + g * 14);
-        grd.addColorStop(0, `rgba(255, 240, 180, ${0.06 * g})`);
-        grd.addColorStop(1, 'rgba(255, 240, 180, 0)');
+      // Outer glow layers (White/Silver glow)
+      for (let g = 6; g >= 1; g--) {
+        const grd = ctx.createRadialGradient(cx, cy, r - 5, cx, cy, r + g * 12 + 5);
+        grd.addColorStop(0, `rgba(240, 248, 255, ${0.08 * g})`);
+        grd.addColorStop(1, 'rgba(240, 248, 255, 0)');
         ctx.beginPath();
-        ctx.arc(cx, cy, r + g * 14, 0, Math.PI * 2);
+        ctx.arc(cx, cy, r + g * 12 + 5, 0, Math.PI * 2);
         ctx.fillStyle = grd;
         ctx.fill();
       }
 
-      // Moon base
-      const moonGrad = ctx.createRadialGradient(cx - 18, cy - 20, 10, cx, cy, r);
-      moonGrad.addColorStop(0, '#fffbe6');
-      moonGrad.addColorStop(0.4, '#f5e6a0');
-      moonGrad.addColorStop(0.75, '#c8a84b');
-      moonGrad.addColorStop(1, '#8b6914');
+      // Bright halo directly around the moon
+      const halo = ctx.createRadialGradient(cx, cy, r - 2, cx, cy, r + 4);
+      halo.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+      halo.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.beginPath();
+      ctx.arc(cx, cy, r + 4, 0, Math.PI * 2);
+      ctx.fillStyle = halo;
+      ctx.fill();
+
+      // Moon base (White & Silver)
+      const moonGrad = ctx.createRadialGradient(cx - 25, cy - 25, 10, cx, cy, r);
+      moonGrad.addColorStop(0, '#ffffff'); // Pure white at highlight
+      moonGrad.addColorStop(0.3, '#f1f5f9'); // Light slate
+      moonGrad.addColorStop(0.7, '#cbd5e1'); // Slate 300
+      moonGrad.addColorStop(1, '#64748b'); // Slate 500 for the edge depth
       ctx.beginPath();
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
       ctx.fillStyle = moonGrad;
       ctx.fill();
 
-      // Craters
+      // Craters (Grayish)
       const craters = [
-        { x: cx + 22, y: cy - 28, r: 10 },
-        { x: cx - 30, y: cy + 18, r: 7 },
-        { x: cx + 10, y: cy + 35, r: 5 },
-        { x: cx - 15, y: cy - 40, r: 4 },
-        { x: cx + 40, y: cy + 10, r: 6 },
+        { x: cx + 22, y: cy - 28, r: 14 },
+        { x: cx - 30, y: cy + 22, r: 9 },
+        { x: cx + 12, y: cy + 40, r: 7 },
+        { x: cx - 18, y: cy - 40, r: 6 },
+        { x: cx + 45, y: cy + 10, r: 10 },
+        { x: cx - 45, y: cy - 10, r: 5 },
       ];
       craters.forEach(c => {
         const cg = ctx.createRadialGradient(c.x - 2, c.y - 2, 1, c.x, c.y, c.r);
-        cg.addColorStop(0, 'rgba(139, 105, 20, 0.5)');
-        cg.addColorStop(1, 'rgba(200, 168, 75, 0.1)');
+        cg.addColorStop(0, 'rgba(100, 116, 139, 0.45)'); // Darker inside
+        cg.addColorStop(1, 'rgba(226, 232, 240, 0.1)'); // Blends out
         ctx.beginPath();
         ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
         ctx.fillStyle = cg;
         ctx.fill();
+
+        // Inner rim highlight for crater 3D effect
+        ctx.beginPath();
+        ctx.arc(c.x - 1, c.y - 1, c.r - 2, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
       });
 
-      // Shimmer overlay
+      // Shimmer overlay (atmospheric glimmer)
       const shimmer = ctx.createRadialGradient(
-        cx - 20 + Math.sin(t * 0.02) * 5,
-        cy - 25 + Math.cos(t * 0.015) * 5,
+        cx - 20 + Math.sin(t * 0.02) * 8,
+        cy - 25 + Math.cos(t * 0.015) * 8,
         5,
         cx, cy, r
       );
-      shimmer.addColorStop(0, `rgba(255,255,255,${0.08 + Math.sin(t * 0.05) * 0.04})`);
-      shimmer.addColorStop(0.5, 'rgba(255,255,255,0.02)');
+      shimmer.addColorStop(0, `rgba(255,255,255,${0.1 + Math.sin(t * 0.05) * 0.05})`);
+      shimmer.addColorStop(0.5, 'rgba(255,255,255,0.03)');
       shimmer.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.beginPath();
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
       ctx.fillStyle = shimmer;
       ctx.fill();
 
-      // Shadow side
-      const shadow = ctx.createRadialGradient(cx + 40, cy, 10, cx + 60, cy, r + 20);
-      shadow.addColorStop(0, 'rgba(0,0,0,0.35)');
+      // Shadow side (Adds depth)
+      const shadow = ctx.createRadialGradient(cx + 50, cy + 20, 10, cx + 70, cy + 20, r + 20);
+      shadow.addColorStop(0, 'rgba(15, 23, 42, 0.35)'); // Dark slate for shadow
       shadow.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.beginPath();
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
@@ -166,7 +181,7 @@ export default function Scene3_Galaxy({ onNext, herName }: Props) {
 
   return (
     <motion.div
-      className="min-h-screen relative overflow-hidden flex items-center justify-center"
+      className="min-h-screen relative overflow-hidden flex items-center justify-center p-4 lg:p-0"
       style={{ background: 'radial-gradient(ellipse at 60% 20%, #0d0520 0%, #020008 60%, #000005 100%)' }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -184,9 +199,9 @@ export default function Scene3_Galaxy({ onNext, herName }: Props) {
               left: `${star.x}%`,
               top: `${star.y}%`,
               background: star.size > 1.8
-                ? `radial-gradient(circle, #fff 0%, #ffeebb 50%, transparent 100%)`
+                ? `radial-gradient(circle, #fff 0%, #aaccff 50%, transparent 100%)`
                 : 'white',
-              boxShadow: star.size > 2 ? `0 0 ${star.size * 3}px rgba(255,240,180,0.8)` : 'none',
+              boxShadow: star.size > 2 ? `0 0 ${star.size * 3}px rgba(200,220,255,0.8)` : 'none',
               opacity: star.opacity,
               animation: `twinkle ${star.duration}s ${star.delay}s infinite alternate`,
             }}
@@ -196,92 +211,99 @@ export default function Scene3_Galaxy({ onNext, herName }: Props) {
 
       {/* Nebula clouds */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute" style={{ width: '500px', height: '300px', top: '5%', left: '5%', background: 'radial-gradient(ellipse, rgba(120,40,180,0.08) 0%, transparent 70%)', filter: 'blur(40px)' }} />
-        <div className="absolute" style={{ width: '400px', height: '250px', bottom: '10%', right: '5%', background: 'radial-gradient(ellipse, rgba(180,20,100,0.07) 0%, transparent 70%)', filter: 'blur(50px)' }} />
-        <div className="absolute" style={{ width: '350px', height: '200px', top: '40%', left: '30%', background: 'radial-gradient(ellipse, rgba(60,20,120,0.06) 0%, transparent 70%)', filter: 'blur(60px)' }} />
+        <div className="absolute" style={{ width: '500px', height: '300px', top: '5%', left: '5%', background: 'radial-gradient(ellipse, rgba(80,140,255,0.06) 0%, transparent 70%)', filter: 'blur(40px)' }} />
+        <div className="absolute" style={{ width: '400px', height: '250px', bottom: '10%', right: '5%', background: 'radial-gradient(ellipse, rgba(180,20,100,0.06) 0%, transparent 70%)', filter: 'blur(50px)' }} />
       </div>
 
-      {/* Memory Stars with hint */}
-      {!showHint && MEMORIES.map((memory) => (
+      {/* Persistent Beautiful Timer Overlay at Top */}
+      <div className="absolute top-6 left-1/2 -translate-x-1/2 w-[90%] max-w-lg z-30 pointer-events-none flex justify-center">
         <motion.div
-          key={memory.id}
-          className="absolute cursor-pointer flex flex-col items-center gap-1"
-          style={{ left: `${memory.x}%`, top: `${memory.y}%` }}
-          onClick={() => setActiveMemory(memory.text)}
+          className="rounded-[2rem] px-5 py-5 md:px-8 md:py-6 text-center shadow-2xl relative overflow-hidden backdrop-blur-xl pointer-events-auto"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 100%)',
+            border: '1px solid rgba(255,255,255,0.15)',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)'
+          }}
+          initial={{ opacity: 0, y: -30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1, ease: "easeOut" }}
         >
-          <motion.div
-            className="relative"
-            animate={{ y: [0, -12, 0], scale: [1, 1.15, 1] }}
-            transition={{ duration: 3 + memory.id * 0.4, repeat: Infinity, ease: 'easeInOut' }}
-            whileHover={{ scale: 1.8 }}
-          >
-            {/* Star shape */}
-            <div className="w-6 h-6 relative flex items-center justify-center">
-              <div className="absolute w-6 h-6 bg-pink-300 rounded-full opacity-30 animate-ping" style={{ animationDuration: '2s' }} />
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <polygon
-                  points="12,2 14.9,9 22.5,9.3 16.8,14.5 18.8,22 12,17.8 5.2,22 7.2,14.5 1.5,9.3 9.1,9"
-                  fill="#f9a8d4"
-                  stroke="#ff69b4"
-                  strokeWidth="0.5"
-                  style={{ filter: 'drop-shadow(0 0 6px rgba(255,105,180,0.9))' }}
-                />
-              </svg>
-            </div>
-          </motion.div>
-        </motion.div>
-      ))}
+          {/* Decorative glow inside timer */}
+          <div className="absolute -top-10 -left-10 w-32 h-32 bg-pink-500/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Hint overlay */}
+          <div className="relative z-10">
+            <div className="flex items-center justify-center gap-4 mb-5">
+              <div className="h-[1px] bg-gradient-to-r from-transparent via-white/30 to-transparent flex-1" />
+              <p className="text-white/90 text-sm md:text-base md:tracking-[0.2em] font-light uppercase px-2 shadow-sm whitespace-nowrap">معاً منذ بدأنــا</p>
+              <div className="h-[1px] bg-gradient-to-l from-transparent via-white/30 to-transparent flex-1" />
+            </div>
+
+            <div className="flex gap-2 md:gap-3 items-center justify-center flex-wrap" dir="ltr">
+              {timer.years > 0 && <TimeUnit value={timer.years} label="سنوات" />}
+              <TimeUnit value={timer.months} label="شهر" />
+              <TimeUnit value={timer.days} label="يوم" />
+              <TimeUnit value={timer.hours} label="ساعة" />
+              <TimeUnit value={timer.minutes} label="دقيقة" />
+              <TimeUnit value={timer.seconds} label="ثانية" pulse />
+            </div>
+
+            <p className="text-white/40 text-xs mt-4 tracking-widest font-mono">21.02.2026 - 08:42 AM</p>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Memory Stars */}
+      <div className="absolute inset-0 z-20 pointer-events-none">
+        {(!showHint || true) && MEMORIES.map((memory) => (
+          <motion.div
+            key={memory.id}
+            className="absolute flex flex-col items-center gap-1 pointer-events-auto cursor-pointer"
+            style={{ left: `${memory.x}%`, top: `${memory.y}%` }}
+            onClick={() => setActiveMemory(memory.text)}
+          >
+            <motion.div
+              className="relative"
+              animate={{ y: [0, -8, 0], scale: [1, 1.1, 1] }}
+              transition={{ duration: 3 + memory.id * 0.4, repeat: Infinity, ease: 'easeInOut' }}
+              whileHover={{ scale: 1.5 }}
+            >
+              <div className="w-5 h-5 relative flex items-center justify-center">
+                <div className="absolute w-5 h-5 bg-pink-300 rounded-full opacity-30 animate-ping" style={{ animationDuration: '2s' }} />
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <polygon
+                    points="12,2 14.9,9 22.5,9.3 16.8,14.5 18.8,22 12,17.8 5.2,22 7.2,14.5 1.5,9.3 9.1,9"
+                    fill="#f9a8d4"
+                    stroke="#ff69b4"
+                    strokeWidth="0.5"
+                    style={{ filter: 'drop-shadow(0 0 6px rgba(255,105,180,0.8))' }}
+                  />
+                </svg>
+              </div>
+            </motion.div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Hint overlay at the bottom so it doesn't block center */}
       <AnimatePresence>
         {showHint && (
           <motion.div
-            className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-8 cursor-pointer"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            className="absolute bottom-20 inset-x-0 z-30 flex flex-col items-center justify-center cursor-pointer pointer-events-auto"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
             onClick={() => setShowHint(false)}
           >
-            {/* Hint text */}
             <motion.div
-              className="text-center px-6"
-              animate={{ y: [0, -8, 0] }}
+              className="text-center px-6 py-4 rounded-3xl bg-black/20 backdrop-blur-sm border border-white/5"
+              animate={{ y: [0, -5, 0] }}
               transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
             >
-              <p className="text-pink-200 text-2xl md:text-3xl font-light tracking-widest mb-2" style={{ fontFamily: 'serif', textShadow: '0 0 20px rgba(255,100,180,0.8)' }}>
+              <p className="text-white md:text-2xl text-xl font-light tracking-widest mb-1" style={{ fontFamily: 'serif', textShadow: '0 0 15px rgba(255,255,255,0.7)' }}>
                 ✨ اضغطي على النجوم ✨
               </p>
-              <p className="text-pink-300/60 text-sm tracking-wider">كل نجمة تحمل ذكرى</p>
-            </motion.div>
-
-            {/* Timer */}
-            <motion.div
-              className="rounded-3xl px-6 py-5 text-center"
-              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,150,200,0.2)', backdropFilter: 'blur(10px)' }}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-            >
-              <p className="text-pink-200/70 text-xs tracking-[0.3em] mb-3 uppercase">معاً منذ</p>
-              <div className="flex gap-3 md:gap-5 items-center justify-center flex-wrap">
-                {timer.years > 0 && (
-                  <TimeUnit value={timer.years} label="سنة" />
-                )}
-                <TimeUnit value={timer.months} label="شهر" />
-                <TimeUnit value={timer.days} label="يوم" />
-                <TimeUnit value={timer.hours} label="ساعة" />
-                <TimeUnit value={timer.minutes} label="دقيقة" />
-                <TimeUnit value={timer.seconds} label="ثانية" pulse />
-              </div>
-              <p className="text-pink-300/40 text-xs mt-3 tracking-wider">21 فبراير 2026 · 8:42 صباحاً 💕</p>
-            </motion.div>
-
-            <motion.div
-              className="text-pink-300/40 text-sm"
-              animate={{ opacity: [0.4, 1, 0.4] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            >
-              اضغطي للمتابعة →
+              <p className="text-white/60 text-sm tracking-wider">كل نجمة تحمل ذكرى منا</p>
             </motion.div>
           </motion.div>
         )}
@@ -289,46 +311,52 @@ export default function Scene3_Galaxy({ onNext, herName }: Props) {
 
       {/* Moon (center) */}
       <motion.div
-        className="relative z-10 flex flex-col items-center justify-center cursor-pointer"
+        className="relative z-10 flex flex-col items-center justify-center cursor-pointer mt-12 md:mt-0"
         onClick={showHint ? () => setShowHint(false) : handleCenterClick}
-        animate={{ y: [0, -10, 0] }}
-        transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-        whileHover={{ scale: 1.05 }}
+        animate={{ y: [0, -6, 0] }}
+        transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+        whileHover={{ scale: 1.03 }}
       >
-        <div className="relative">
-          <canvas ref={canvasRef} width={220} height={220} className="rounded-full" />
-          {!showHint && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span
-                className="font-serif text-3xl text-yellow-100 tracking-widest"
-                style={{ textShadow: '0 0 20px rgba(255,240,150,0.9), 0 0 40px rgba(255,200,100,0.5)' }}
-              >
-                {herName}
-              </span>
-            </div>
-          )}
+        <div className="relative flex items-center justify-center">
+          <canvas ref={canvasRef} width={250} height={250} className="rounded-full" />
+
+          {/* Her Name etched on the moon */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <span
+              className="font-serif text-4xl md:text-5xl tracking-widest font-bold"
+              style={{
+                color: '#e2e8f0', // Light silver
+                textShadow: '0 2px 4px rgba(0,0,0,0.4), 0 -1px 2px rgba(255,255,255,0.8), 0 0 15px rgba(255,255,255,0.5)',
+                WebkitTextStroke: '1px rgba(100,116,139,0.3)', // Slight slate stroke for definition
+              }}
+            >
+              {herName}
+            </span>
+          </div>
+
           {centerClicked && (
             <motion.div
-              className="absolute inset-0 rounded-full"
-              style={{ background: 'radial-gradient(circle, rgba(255,100,180,0.3) 0%, transparent 70%)' }}
-              animate={{ scale: [1, 1.5, 1] }}
+              className="absolute inset-0 rounded-full pointer-events-none"
+              style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.5) 0%, transparent 70%)' }}
+              animate={{ scale: [1, 1.4, 1] }}
               transition={{ duration: 1.5, repeat: Infinity }}
             />
           )}
         </div>
       </motion.div>
 
+      {/* Completion message */}
       <AnimatePresence>
         {centerClicked && (
           <motion.div
-            className="absolute bottom-24 text-center w-full z-20"
+            className="absolute bottom-16 text-center w-full z-20 pointer-events-none"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1, duration: 2 }}
           >
-            <h2 className="font-serif text-4xl md:text-6xl text-white tracking-widest font-light leading-relaxed"
-              style={{ textShadow: '0 0 30px rgba(255,215,0,0.7)' }}>
-              أنتِ مركز كوني.
+            <h2 className="font-serif text-3xl md:text-5xl text-white tracking-widest font-light leading-relaxed"
+              style={{ textShadow: '0 0 20px rgba(255,255,255,0.8)' }}>
+              أنتِ قمر حياتي.
             </h2>
           </motion.div>
         )}
@@ -338,26 +366,34 @@ export default function Scene3_Galaxy({ onNext, herName }: Props) {
       <AnimatePresence>
         {activeMemory && (
           <motion.div
-            className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-6"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-6"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setActiveMemory(null)}
           >
             <motion.div
-              className="p-8 md:p-14 rounded-3xl max-w-2xl text-center"
-              style={{ background: 'rgba(20,5,40,0.85)', border: '1px solid rgba(255,100,180,0.3)', backdropFilter: 'blur(20px)', boxShadow: '0 0 60px rgba(180,0,100,0.2)' }}
-              initial={{ scale: 0.8, y: 20 }}
+              className="p-8 md:p-12 rounded-[2rem] max-w-lg w-full text-center relative overflow-hidden"
+              style={{
+                background: 'rgba(20, 25, 40, 0.85)',
+                border: '1px solid rgba(255,150,200,0.2)',
+                boxShadow: '0 20px 50px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.05)'
+              }}
+              initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.8, y: 20 }}
+              exit={{ scale: 0.9, y: 20 }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="text-4xl mb-6">✨</div>
-              <p className="font-serif text-2xl md:text-3xl text-pink-100 leading-relaxed italic">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-pink-500/10 rounded-full blur-3xl" />
+              <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl" />
+
+              <div className="text-4xl mb-6 relative z-10 text-white shadow-white drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]">✨</div>
+              <p className="font-serif text-xl md:text-2xl text-white/90 leading-relaxed italic relative z-10" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
                 "{activeMemory}"
               </p>
+
               <button
-                className="mt-10 px-8 py-3 border border-pink-500/50 rounded-full text-pink-300 text-base hover:bg-pink-500/20 transition-colors"
+                className="mt-10 px-8 py-3 border border-pink-300/30 rounded-full text-pink-200 text-sm tracking-wider hover:bg-pink-500/20 transition-colors relative z-10 backdrop-blur-sm"
                 onClick={() => setActiveMemory(null)}
               >
                 إغلاق الذكرى
@@ -369,8 +405,8 @@ export default function Scene3_Galaxy({ onNext, herName }: Props) {
 
       <style>{`
         @keyframes twinkle {
-          0% { opacity: 0.15; transform: scale(0.7); }
-          100% { opacity: 1; transform: scale(1.3); }
+          0% { opacity: 0.2; transform: scale(0.8); }
+          100% { opacity: 1; transform: scale(1.2); }
         }
       `}</style>
     </motion.div>
@@ -379,18 +415,19 @@ export default function Scene3_Galaxy({ onNext, herName }: Props) {
 
 function TimeUnit({ value, label, pulse }: { value: number; label: string; pulse?: boolean }) {
   return (
-    <div className="flex flex-col items-center min-w-[48px]">
+    <div className="flex flex-col items-center justify-center bg-white/5 rounded-xl border border-white/10 w-[3.5rem] h-[4rem] md:w-[4.5rem] md:h-[5rem] backdrop-blur-md shadow-inner">
       <motion.span
         key={value}
-        className="text-2xl md:text-3xl font-bold text-white"
-        style={{ textShadow: '0 0 15px rgba(255,150,200,0.8)', fontFamily: 'monospace' }}
-        initial={pulse ? { scale: 1.2, color: '#ff69b4' } : {}}
-        animate={pulse ? { scale: 1, color: '#ffffff' } : {}}
-        transition={{ duration: 0.3 }}
+        className="text-xl md:text-[1.75rem] font-bold text-white tracking-widest"
+        style={{ fontFamily: 'monospace', textShadow: '0 2px 10px rgba(255,255,255,0.4)' }}
+        initial={pulse ? { scale: 1.15, textShadow: '0 0 15px rgba(255,255,255,0.8)' } : {}}
+        animate={pulse ? { scale: 1, textShadow: '0 2px 10px rgba(255,255,255,0.4)' } : {}}
+        transition={{ duration: 0.5 }}
       >
         {String(value).padStart(2, '0')}
       </motion.span>
-      <span className="text-pink-300/60 text-xs mt-1 tracking-wider">{label}</span>
+      <span className="text-white/60 text-[10px] md:text-xs mt-1 tracking-wider">{label}</span>
     </div>
   );
 }
+
