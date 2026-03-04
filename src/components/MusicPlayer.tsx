@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, MouseEvent } from 'react';
 import { Music, Music2 } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -7,8 +7,7 @@ export default function MusicPlayer() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    // Using a reliable public domain romantic piano piece (Chopin - Nocturne Op 9 No 2)
-    audioRef.current = new Audio('https://upload.wikimedia.org/wikipedia/commons/c/c8/Chopin_-_Nocturne_Op_9_No_2_E_Flat_Major.ogg');
+    audioRef.current = new Audio('/u0krhNPiiWc.mp3');
     audioRef.current.loop = true;
     audioRef.current.volume = 0.5;
 
@@ -17,27 +16,36 @@ export default function MusicPlayer() {
         audioRef.current.play().then(() => {
           setIsPlaying(true);
           document.removeEventListener('click', playOnInteraction);
+          document.removeEventListener('touchstart', playOnInteraction);
         }).catch(err => console.log("Auto-play failed:", err));
       }
     };
 
     document.addEventListener('click', playOnInteraction);
-    
+    document.addEventListener('touchstart', playOnInteraction);
+
     return () => {
       document.removeEventListener('click', playOnInteraction);
+      document.removeEventListener('touchstart', playOnInteraction);
       if (audioRef.current) {
         audioRef.current.pause();
+        audioRef.current = null;
       }
     };
   }, []);
 
-  const togglePlay = () => {
+  const togglePlay = (e: MouseEvent) => {
+    e.stopPropagation();
+    if (!audioRef.current) return;
+
     if (isPlaying) {
-      audioRef.current?.pause();
+      audioRef.current.pause();
+      setIsPlaying(false);
     } else {
-      audioRef.current?.play().catch(e => console.log("Audio play failed:", e));
+      audioRef.current.play()
+        .then(() => setIsPlaying(true))
+        .catch(err => console.log("Audio play failed:", err));
     }
-    setIsPlaying(!isPlaying);
   };
 
   return (
